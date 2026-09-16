@@ -1,4 +1,8 @@
 # Dataset -- COMPAS Recidivism (ProPublica)
+20260672 - Diogo Miguel Costa Rodrigues
+
+The logistic regression is better than this decision tree because we didn´t put max_depht on our tree which led us to overfitting on that case. I saw this by comparing the train with the test accuracy.
+
 
 ## The problem
 
