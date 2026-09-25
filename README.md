@@ -1,3 +1,45 @@
+20260672 - Diogo Miguel Costa Rodrigues
+
+Week 1- The logistic regression is better than this decision tree because we didn´t put max_depht on our tree which led us to overfitting on that case. I saw this by comparing the train with the test accuracy.
+
+Week 2- This week, I implemented ,in the pipeline, the data cleaning function and put a new paramenter of max_depth=5 in the decision tree model.
+By putting max_depth in the decision tree, i think i can say that i solved the overfitting problem because the difference between is now minimal. 
+      Last week difference: +0.199
+      This week difference: +0.012 (without cleaning) and +0.049 (with cleaning)
+
+
+Initially, the uncleaned test set was with 1252 observations and had some data intigrity issues, like formatting duplicates and invalid or missing categories. The cleaning process was essential to fix these anomalies because it standardized the class labels and removed inconsistent records, which reduced the test set to 1188 observations.
+
+After cleaning, by evaluating both algorithms, we can conclude that the logistic regression is still the best model for this case.
+The logistic regression achieved a higher test accuracy than the tree (0.655 vs 0.642), more stable generalization and a superior recall of 0.51 (vs 0.45)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 # Baseline Predictive Pipeline -- ETAI
 
 This is the **starting point** for your semester project: a small but *complete* predictive pipeline -- every piece a real project needs (entry point, config, data loading, preprocessing, model, evaluation), just kept as simple as possible for now.
