@@ -10,10 +10,14 @@ By putting max_depth in the decision tree, i think i can say that i solved the o
 
 Initially, the uncleaned test set was with 1252 observations and had some data intigrity issues, like formatting duplicates and invalid or missing categories. The cleaning process was essential to fix these anomalies because it standardized the class labels and removed inconsistent records, which reduced the test set to 1188 observations.
 
-After cleaning, by evaluating both algorithms, we can conclude that the logistic regression is still the best model for this case.
-The logistic regression achieved a higher test accuracy than the tree (0.655 vs 0.642), more stable generalization and a superior recall of 0.51 (vs 0.45)
+After cleaning, by evaluating both algorithms, we can conclude that the decision_tree is  the best model for this case.
+The tree achieved a higher test accuracy than the the logistic regression (0.67 vs 0.65), more stable generalization and a superior recall of 0.65 (vs 0.51)
 
 
+Week 3- This week, I implemented in the pipeline the drop_duplicate_rows, build_preprocessor and build_model functions. I also implemented two new models : the dummy classifier and random forest.
+In preprocessing this week I implemented the imputation with the median for numeric features and the most frequent for categorical features.
+Comparing the 4 models, we can conclude that the worst one was the dummy classifier, as expected. The other tree got almost the same accuracy (0.66 vs 0.66 vs 0.67) but the random forest got the best f1-score, so i think i can conclude that i was the best model with this week´s implementations.
+The four models weren´t overfitting as well.
 
 
 
