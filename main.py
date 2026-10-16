@@ -8,16 +8,17 @@ This orchestrates the full (deliberately simple) pipeline:
     load config -> load data -> preprocess -> split -> train
     -> evaluate (train & test) -> save results
 """
+from sklearn.utils import shuffle
 import yaml
 from sklearn.model_selection import StratifiedKFold
-from sklearn.pipeline import Pipeline
+from sklearn.pipeline import Pipeline, make_pipeline
 
 from src.data import load_data
 from src.preprocessing import (
     clean_dataset, drop_duplicate_rows, split_features_target, build_preprocessor, split_dev_test,
 )
 from src.model import build_model
-from src.evaluate import evaluate, fairness_report
+from src.evaluate import cv_report, evaluate, fairness_report, cross_validate_pipeline, oof_classification_report
 from src.results import save_run
 
 
@@ -44,25 +45,38 @@ def main():
         X, y, extras, test_size=config["test_set"]["size"], random_state=config["test_set"]["random_state"]
     )
 
-   
-
-
-
+    cv_config = config["cv"]
+    shuffle = cv_config.get("shuffle", True)
+    
+    cv = StratifiedKFold(n_splits=cv_config["n_splits"], shuffle=shuffle,
+                     random_state=cv_config.get("random_state") if shuffle else None)
     pipeline = Pipeline([
-        ("prep", build_preprocessor(config["preprocessing"])),
-        ("model", build_model(config["model"])),
+    ("prep", build_preprocessor(config["preprocessing"])),
+    ("model", build_model(config["model"])),
     ])
-    pipeline.fit(X_dev, y_dev)
-
-  
-    # predict on both splits -- train accuracy vs. test accuracy is how we'll spot overfitting, not just how "good" the model looks
-    y_train_pred = pipeline.predict(X_dev)
-    y_test_pred = pipeline.predict(X_test)
-
-    report = evaluate(y_dev, y_train_pred, y_test, y_test_pred)
-    report += "\n" + fairness_report(
-        y_test, y_test_pred, extras_test, sensitive_attr=config["data"]["sensitive_attr"]
+    
+    scoring = cv_config.get("scoring", "accuracy")
+    fold_scores, y_oof = cross_validate_pipeline(
+        pipeline, X_dev, y_dev, cv, scoring, n_jobs=cv_config.get("n_jobs", 1)
     )
+    
+    report = cv_report(fold_scores, scoring)
+    report += "\n\n" + oof_classification_report(y_dev, y_oof)
+    report += "\n" + fairness_report(
+        y_dev, y_oof, extras_dev, sensitive_attr=config["data"]["sensitive_attr"]
+    )
+
+    # the model we'd actually use: same pipeline, refit on EVERY development row. CV above
+    # estimated how well this recipe does; it didn't produce a model.
+    final_model = pipeline.fit(X_dev, y_dev)
+    refit = f"Final model: {config['model']['type']} refit on all {len(X_dev)} development rows."
+    print(refit)
+    report += "\n" + refit + "\n"
+
+    locked = (f"Locked test set: {len(X_test)} rows set aside, not evaluated. "
+              f"Development set: {len(X_dev)} rows.")
+    print(locked)
+    report += "\n" + locked + "\n"
 
     results_dir = config.get("output", {}).get("results_dir", "results")
     path = save_run(results_dir, config, report)

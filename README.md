@@ -19,6 +19,15 @@ In preprocessing this week I implemented the imputation with the median for nume
 Comparing the 4 models, we can conclude that the worst one was the dummy classifier, as expected. The other tree got almost the same accuracy (0.66 vs 0.66 vs 0.67) but the random forest got the best f1-score, so i think i can conclude that i was the best model with this week´s implementations.
 The four models weren´t overfitting as well.
 
+Week 5- 
+| Model | Holdout accuracy (W3) | CV accuracy (mean ± std) | CV train–val gap |
+|---|---|---|---|
+| Dummy | 0.550 | 0.549 ± 0 | 0 |
+| Logistic regression | 0.658 | 0.672 ± 0.013 | +0.003 |
+| Decision tree | 0.665 | 0.674 ± 0.018 | 0.011 |
+| Random forest | 0.675 | 0.681 ± 0.012| +0.008 |
+
+I trust the 5-fold cross-validation accuracy much more than the old holdout score because a single split can easily be lucky or unlucky. Looking at the train-val gaps, all models show very small train–val gap, which means none of them are really overfitting. The ranking from the previous week still holds under cross-validation: Random Forest is still the best model at around 0.681, followed closely by Decision Tree and Logistic Regression. Even so, the CV results show that Decision Tree and Logistic Regression are basically tied within the standard deviation, so having cross-validation gives a much safer comparison while keeping the test set locked.
 
 
 
