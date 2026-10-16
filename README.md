@@ -19,7 +19,10 @@ In preprocessing this week I implemented the imputation with the median for nume
 Comparing the 4 models, we can conclude that the worst one was the dummy classifier, as expected. The other tree got almost the same accuracy (0.66 vs 0.66 vs 0.67) but the random forest got the best f1-score, so i think i can conclude that i was the best model with this week´s implementations.
 The four models weren´t overfitting as well.
 
-Week 5- 
+Week 5-
+### Cross Valitation
+To ensure sound evaluation, the dataset is initially split into a development set and a locked test set that remains completely untouched during all experimentation and hyperparameter tuning. Within the development set, we evaluate models using stratified 5-fold cross-validation, which preserves the original class distribution across every split and provides a reliable measure of performance stability across folds.
+
 | Model | Holdout accuracy (W3) | CV accuracy (mean ± std) | CV train–val gap |
 |---|---|---|---|
 | Dummy | 0.550 | 0.549 ± 0 | 0 |
@@ -27,13 +30,23 @@ Week 5-
 | Decision tree | 0.665 | 0.674 ± 0.018 | 0.011 |
 | Random forest | 0.675 | 0.681 ± 0.012| +0.008 |
 
-I trust the 5-fold cross-validation accuracy much more than the old holdout score because a single split can easily be lucky or unlucky. Looking at the train-val gaps, all models show very small train–val gap, which means none of them are really overfitting. The ranking from the previous week still holds under cross-validation: Random Forest is still the best model at around 0.681, followed closely by Decision Tree and Logistic Regression. Even so, the CV results show that Decision Tree and Logistic Regression are basically tied within the standard deviation, so having cross-validation gives a much safer comparison while keeping the test set locked.
+I trust the 5-fold cross-validation accuracy much more than the old holdout score because a single split can easily be lucky or unlucky. Looking at the train-val gaps, all models show very small train–val gap, which means none of them are really overfitting.
+The ranking from the previous week still holds under cross-validation: Random Forest is still the best model at around 0.681, followed closely by Decision Tree and Logistic Regression. Even so, the CV results show that Decision Tree and Logistic Regression are basically tied within the standard deviation, so having cross-validation gives a much safer comparison while keeping the test set locked. I also used max_depht=5 in the tree and in the forest and n_estimators=100 in the forest
 
 
 
+### Hyperparameter tuning
+### Hyperparameter tuning
 
+We used Optuna with 30 trials over 5 inner folds to optimize model-specific search spaces inside an outer 5-fold cross-validation scheme. This nested design prevents data leakage because all preprocessing, feature transformations, and hyperparameter selections are fitted exclusively on the inner training folds, leaving the outer validation folds completely untouched.
 
+| Model | Default: CV mean ± std | Tuned: nested CV mean ± std | Tuning score (best trial) | Optimism | Chosen hyperparameters |
+|---|---|---|---|---|---|
+| Decision tree | 0.610 ± 0.018 | 0.672 ± 0.015 | 0.679 | +0.002 | max_depth: 6, min_samples_leaf: 101, criterion: gini |
+| Logistic regression | 0.672 ± 0.013 | 0.671 ± 0.015 | 0.677 | +0.004 | C: 0.075 |
+| Random forest | 0.647 ± 0.016 | 0.682 ± 0.015 | 0.683 | -0.001 | max_depth: 10, min_samples_leaf: 43, n_estimators: 64, criterion: gini |
 
+Tuning brought clear performance gains to both the Decision Tree (rising from 0.610 to 0.672) and Random Forest (improving from 0.647 to 0.682), with both gains easily exceeding their fold-to-fold standard deviations of approximately 0.015 to 0.018. In contrast, Logistic Regression remained with almost thge same accuracy (0.672 vs 0.671), indicating that standard L2 regularization was already close to optimal for this linear feature space. This tuning process changed the top-performing model: while Logistic Regression was the strongest baseline under default settings, Random Forest took the lead once its tree depth and leaf constraints were properly optimized. For our final model (Random Forest), we report the honest nested CV score of 0.682 ± 0.015 rather than the optimistic best-trial score of 0.683, ensuring our performance estimate is entirely free from hyperparameter selection bias.
 
 
 
