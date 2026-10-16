@@ -31,11 +31,9 @@ To ensure sound evaluation, the dataset is initially split into a development se
 | Random forest | 0.675 | 0.681 ± 0.012| +0.008 |
 
 I trust the 5-fold cross-validation accuracy much more than the old holdout score because a single split can easily be lucky or unlucky. Looking at the train-val gaps, all models show very small train–val gap, which means none of them are really overfitting.
-The ranking from the previous week still holds under cross-validation: Random Forest is still the best model at around 0.681, followed closely by Decision Tree and Logistic Regression. Even so, the CV results show that Decision Tree and Logistic Regression are basically tied within the standard deviation, so having cross-validation gives a much safer comparison while keeping the test set locked. I also used max_depht=5 in the tree and in the forest and n_estimators=100 in the forest
+The ranking from the previous week still holds under cross-validation: Random Forest is still the best model at around 0.681, followed closely by Decision Tree and Logistic Regression. Even so, the CV results show that Decision Tree and Logistic Regression are basically tied within the standard deviation, so having cross-validation gives a much safer comparison while keeping the test set locked. I also used max_depht=5 in the tree and in the forest and n_estimators=100 in the forest.
 
 
-
-### Hyperparameter tuning
 ### Hyperparameter tuning
 
 We used Optuna with 30 trials over 5 inner folds to optimize model-specific search spaces inside an outer 5-fold cross-validation scheme. This nested design prevents data leakage because all preprocessing, feature transformations, and hyperparameter selections are fitted exclusively on the inner training folds, leaving the outer validation folds completely untouched.
@@ -46,23 +44,23 @@ We used Optuna with 30 trials over 5 inner folds to optimize model-specific sear
 | Logistic regression | 0.672 ± 0.013 | 0.671 ± 0.015 | 0.677 | +0.004 | C: 0.075 |
 | Random forest | 0.647 ± 0.016 | 0.682 ± 0.015 | 0.683 | -0.001 | max_depth: 10, min_samples_leaf: 43, n_estimators: 64, criterion: gini |
 
-Tuning brought clear performance gains to both the Decision Tree (rising from 0.610 to 0.672) and Random Forest (improving from 0.647 to 0.682), with both gains easily exceeding their fold-to-fold standard deviations of approximately 0.015 to 0.018. In contrast, Logistic Regression remained with almost thge same accuracy (0.672 vs 0.671), indicating that standard L2 regularization was already close to optimal for this linear feature space. This tuning process changed the top-performing model: while Logistic Regression was the strongest baseline under default settings, Random Forest took the lead once its tree depth and leaf constraints were properly optimized. For our final model (Random Forest), we report the honest nested CV score of 0.682 ± 0.015 rather than the optimistic best-trial score of 0.683, ensuring our performance estimate is entirely free from hyperparameter selection bias.
+Tuning brought clear performance gains to both the Decision Tree (rising from 0.610 to 0.672) and Random Forest (improving from 0.647 to 0.682), with both gains easily exceeding their fold-to-fold standard deviations of approximately 0.015 to 0.018. In contrast, Logistic Regression remained with almost thge same accuracy (0.672 vs 0.671), indicating that standard L2 regularization was already close to optimal for this linear feature space. 
+This tuning process changed the top-performing model: while Logistic Regression was the strongest baseline under default settings, Random Forest took the lead once its tree depth and leaf constraints were properly optimized.
+For our final model (Random Forest), we report the honest nested CV score of 0.682 ± 0.015 rather than the optimistic best-trial score of 0.683, ensuring our performance estimate is entirely free from hyperparameter selection bias.
 
 
+### Ensembles
 
+| Model | Default: CV mean ± std (gap) | Tuned: nested CV mean ± std (gap) | Tuning score (best trial) | Chosen hyperparameters |
+|---|---|---|---|---|
+| Logistic regression | 0.672 ± 0.013 (+0.003) | — | — | — |
+| Decision tree | 0.610 ± 0.018 (+0.085) | 0.672 ± 0.015 (+0.008) | 0.679 | max_depth: 6, min_samples_leaf: 101, criterion: gini |
+| Random forest | 0.647 ± 0.016 (+0.085) | 0.682 ± 0.015 (+0.006) | 0.683 | max_depth: 10, min_samples_leaf: 43, n_estimators: 64, criterion: gini |
+| Oblique random forest | 0.645 ± 0.013 (+0.114) | 0.682 ± 0.014 (+0.008) | 0.682 | max_depth: 5, min_samples_leaf: 3, n_components: 9 |
+| AdaBoost | 0.668 ± 0.013 (+0.003) | 0.682 ± 0.017 (+0.004) | 0.684 | max_depth: 4, n_estimators: 220, learning_rate: 0.025 |
 
-
-
-
-
-
-
-
-
-
-
-
-
+I choose the standard Random Forest: while all three tuned ensembles reached an identical honest nested CV accuracy of 0.682, Random Forest provides higher stability with a lower fold-to-fold standard deviation (±0.015 vs ±0.017 for AdaBoost) and significantly lower computational overhead. 
+Its lead over the other ensemble models is effectively zero and well within the ~0.015 fold-to-fold standard deviation, showing that the three architectures reached an identical performance plateau. The tuned hyperparameters align closely with theory: bagging architectures (Random Forest and Oblique Random Forest) utilize deeper trees (depths 5–10) because averaging across independent trees cancels out individual variance, whereas AdaBoost relies on shallower base trees (depth 4) paired with a conservative learning rate (0.025) to sequentially reduce bias without overfitting. Consequently, I report Random Forest with its honest nested cross-validation score of 0.682 ± 0.015 (rather than the optimistic 0.683 from the best tuning trial) to guarantee an unbiased estimate of generalization performance, as I recommended in the hyperparameter tuning section.
 
 
 
