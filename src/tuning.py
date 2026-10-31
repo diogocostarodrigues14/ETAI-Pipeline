@@ -48,15 +48,14 @@ def tune_pipeline(pipeline, X, y, cv, scorer, search_space: dict, n_trials: int,
 
 
 def nested_cross_validate(pipeline, X, y, outer_cv, inner_cv, scorers: dict, selection_metric: str,
-                          search_space: dict,
-                          n_trials: int, random_state: int, n_jobs: int = 1):
+                          search_space: dict, n_trials: int, random_state: int, n_jobs: int = 1):
     """
     Honest estimate of the tuning procedure. For every outer fold: tune on the outer-training
-    rows (`tune_pipeline` with `inner_cv`), refit the best pipeline on them, and score it on
-    the outer-validation rows, which took no part in the tuning.
+    rows (`tune_pipeline` with `inner_cv`, on `selection_metric`), refit the best pipeline on
+    them, and score it on the outer-validation rows, which took no part in the tuning.
 
-    Returns (fold_scores, y_oof), as `cross_validate_pipeline` does, with two extra kinds of
-    columns: `inner_best` (the tuning score inside that fold) and the hyperparameters chosen.
+    Returns (fold_scores, oof_proba), as `cross_validate_pipeline` does, with two extra kinds
+    of columns: `inner_best` (the tuning score inside that fold) and the hyperparameters chosen.
     """
     rows = []
     oof_proba = np.empty(len(X))
@@ -64,27 +63,23 @@ def nested_cross_validate(pipeline, X, y, outer_cv, inner_cv, scorers: dict, sel
         X_train, y_train = X.iloc[train_idx], y.iloc[train_idx]
         X_val, y_val = X.iloc[val_idx], y.iloc[val_idx]
 
-        best_pipeline, study = tune_pipeline(pipeline, X_train, y_train, inner_cv,
-                                             scorers[selection_metric],
+        best_pipeline, study = tune_pipeline(pipeline, X_train, y_train, inner_cv, scorers[selection_metric],
                                              search_space, n_trials, random_state, n_jobs)
         best_pipeline.fit(X_train, y_train)
 
         train_score = scorers[selection_metric](best_pipeline, X_train, y_train)
-        val_scores = {name: scorer(best_pipeline, X_val, y_val)
-                      for name, scorer in scorers.items()}
+        val_scores = {name: scorer(best_pipeline, X_val, y_val) for name, scorer in scorers.items()}
         oof_proba[val_idx] = best_pipeline.predict_proba(X_val)[:, 1]
-        rows.append({"fold": fold, "train": train_score,
-                     "validation": val_scores[selection_metric],
-                     "gap": train_score - val_scores[selection_metric],
-                     **val_scores, "inner_best": study.best_value,
-                     **study.best_params})
+        rows.append({"fold": fold, "train": train_score, "validation": val_scores[selection_metric],
+                     "gap": train_score - val_scores[selection_metric], **val_scores,
+                     "inner_best": study.best_value, **study.best_params})
     return pd.DataFrame(rows), oof_proba
 
 
 def tuning_report(study, nested_scores: pd.DataFrame, selection_metric: str, top: int = 5) -> str:
     """
     Best hyperparameters and top trials of the final study, plus the optimism check (mean
-    tuning score vs mean honest score over the outer folds), as text (printed and returned).
+    tuning score vs mean honest score over the outer folds), as text.
     """
     trials = study.trials_dataframe(attrs=("number", "value", "params", "user_attrs"))
     trials = trials.rename(columns=lambda c: c.replace("params_", "").replace("user_attrs_", ""))

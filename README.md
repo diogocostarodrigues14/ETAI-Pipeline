@@ -33,7 +33,6 @@ To ensure sound evaluation, the dataset is initially split into a development se
 I trust the 5-fold cross-validation accuracy much more than the old holdout score because a single split can easily be lucky or unlucky. Looking at the train-val gaps, all models show very small train–val gap, which means none of them are really overfitting.
 The ranking from the previous week still holds under cross-validation: Random Forest is still the best model at around 0.681, followed closely by Decision Tree and Logistic Regression. Even so, the CV results show that Decision Tree and Logistic Regression are basically tied within the standard deviation, so having cross-validation gives a much safer comparison while keeping the test set locked. I also used max_depht=5 in the tree and in the forest and n_estimators=100 in the forest.
 
-
 ### Hyperparameter tuning
 
 We used Optuna with 30 trials over 5 inner folds to optimize model-specific search spaces inside an outer 5-fold cross-validation scheme. This nested design prevents data leakage because all preprocessing, feature transformations, and hyperparameter selections are fitted exclusively on the inner training folds, leaving the outer validation folds completely untouched.
@@ -63,6 +62,28 @@ I choose the standard Random Forest: while all three tuned ensembles reached an 
 Its lead over the other ensemble models is effectively zero and well within the ~0.015 fold-to-fold standard deviation, showing that the three architectures reached an identical performance plateau. The tuned hyperparameters align closely with theory: bagging architectures (Random Forest and Oblique Random Forest) utilize deeper trees (depths 5–10) because averaging across independent trees cancels out individual variance, whereas AdaBoost relies on shallower base trees (depth 4) paired with a conservative learning rate (0.025) to sequentially reduce bias without overfitting. Consequently, I report Random Forest with its honest nested cross-validation score of 0.682 ± 0.015 (rather than the optimistic 0.683 from the best tuning trial) to guarantee an unbiased estimate of generalization performance, as I recommended in the hyperparameter tuning section.
 
 
+
+
+
+
+Week7  
+### Add Naive Bayes, Gradient Boosting, and Hist Gradient Boosting; set up tuning spaces and run nested CV evaluations 
+
+### Scoreboard
+
+| Model | Untuned (ROC-AUC) | Tuned / Nested (ROC-AUC) |  Best Params |
+| :--- | :---: | :---: | :--- |
+| `dummy` (floor) | 0.5000 ± 0.0000 | — | Baseline (`most_frequent`) |
+| `naive_bayes` | 0.6847 ± 0.0111 | 0.7007 ± 0.0109 | `var_smoothing ≈ 0.0287` |
+| `decision_tree` | 0.6038 ± 0.0153 | 0.7143 ± 0.0126 | `max_depth: 8, min_samples_leaf: 149` |
+| `logistic_regression` | 0.7186 ± 0.0139 | 0.7181 ± 0.0136 | `C ≈ 0.0060` |
+| `hist_gradient_boosting` | 0.7169 ± 0.0197 | 0.7259 ± 0.0142 | `max_leaf_nodes: 4, lr ≈ 0.0173` |
+| `adaboost` | 0.7232 ± 0.0163 | 0.7269 ± 0.0145 | `max_depth: 3, n_estimators: 349` |
+| `oblique_random_forest` | 0.6852 ± 0.0159 | 0.7275 ± 0.0123 | `components: 8, min_samples_leaf: 149` |
+| `random_forest` | 0.6826 ± 0.0184 | 0.7281 ± 0.0146 | `max_depth: 10, min_samples_leaf: 22` |
+
+
+I chose ROC-AUC as my selection metric because standard accuracy can be misleading whenever there is class imbalance. ROC-AUC evaluates how well the model discriminates between classes across every decision threshold, rather than depending on a fixed 0.5 probability cutoff. This gave me an objective, threshold-independent way to evaluate and compare all the models under nested cross-validation.
 
 # Baseline Predictive Pipeline -- ETAI
 
