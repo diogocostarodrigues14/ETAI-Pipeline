@@ -89,13 +89,13 @@ preprocessing:
 
 
 model:
-  type: adaboost
+  type: "gradient_boosting"   # one of: decision_tree, random_forest, logistic_regression, oblique_random_forest, adaboost, gradient_boosting, hist_gradient_boosting, naive_bayes
   params:
     random_state: 42
     
 
 tuning:
-  enabled: true
+  enabled: false
   n_trials: 30
   n_splits: 5                                       # folds that score each candidate
   random_state: 42                                  # seeds the sampler and those folds
