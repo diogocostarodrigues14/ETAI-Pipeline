@@ -85,6 +85,13 @@ Week7
 
 I chose ROC-AUC as my selection metric because standard accuracy can be misleading whenever there is class imbalance. ROC-AUC evaluates how well the model discriminates between classes across every decision threshold, rather than depending on a fixed 0.5 probability cutoff. This gave me an objective, threshold-independent way to evaluate and compare all the models under nested cross-validation.
 
+
+Week 8
+### Add XGBoost and feature_selection
+
+I evaluated tuned XGBoost without feature selection (ROC-AUC: 0.727 ± 0.015, 10 features) against the model with selection (ROC-AUC: 0.725 ± 0.012), which retained only 2 features ("numeric__age" and "numeric__priors_count"). By applying the corrected paired t-test over the nested CV folds yielded a mean difference of +0.0022 with a t-obs=0.66 and a p-value=0.55. Because the difference is not statistically significant (p-value > 0.05), the smaller model is effectively just as good as the full model while displaying lower variance. I would definitely keep feature selection enabled because it eliminates 80% of the feature space, substantially improving interpretability and computational efficiency without compromising predictive discrimination.
+
+
 # Baseline Predictive Pipeline -- ETAI
 
 This is the **starting point** for your semester project: a small but *complete* predictive pipeline -- every piece a real project needs (entry point, config, data loading, preprocessing, model, evaluation), just kept as simple as possible for now.
