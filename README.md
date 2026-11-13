@@ -91,6 +91,79 @@ Week 8
 
 I evaluated tuned XGBoost without feature selection (ROC-AUC: 0.727 ± 0.015, 10 features) against the model with selection (ROC-AUC: 0.725 ± 0.012), which retained only 2 features ("numeric__age" and "numeric__priors_count"). By applying the corrected paired t-test over the nested CV folds yielded a mean difference of +0.0022 with a t-obs=0.66 and a p-value=0.55. Because the difference is not statistically significant (p-value > 0.05), the smaller model is effectively just as good as the full model while displaying lower variance. I would definitely keep feature selection enabled because it eliminates 80% of the feature space, substantially improving interpretability and computational efficiency without compromising predictive discrimination.
 
+Week 9 
+### Beyond Compas : Option A
+
+This week I extended the pipeline to a second binary classification problem: predicting whether a person earns more than 50,000 USD per year in the Adult income dataset.
+
+The original COMPAS pipeline is still run with:
+
+```powershell
+python main.py config.yaml
+```
+
+The Adult pipeline is run with its own configuration:
+
+```powershell
+python main.py config_adult.yaml
+```
+
+### What broke and how it was fixed
+
+| Problem | Why it broke | Fix |
+|---|---|---|
+| The config was fixed to `config.yaml` | `main.py` did not accept another config file | `main.py` now accepts a config path as a command-line argument |
+| Adult columns were missing from the COMPAS assumptions | The pipeline assumed columns such as `score_text` always existed | Dataset-specific checks were made conditional |
+| Adult uses `?` as a missing-value marker | `?` was read as an ordinary category | To correct this part had to put the columns that had `?` in thecanonical_categories of config_adult.yaml|
+| `workclass` and `occupation` have informative missingness | Imputation alone would hide the missingness pattern | Missingness indicators were added for these columns |
+| `education` duplicates `education_num` | Both columns contain the same information | `education` was removed and `education_num` was kept |
+| `fnlwgt` is a population-sampling weight | It is not an individual characteristic | `fnlwgt` was excluded from the model features |
+| Diferent test size | This week the train and test sets were already splited | Put test_size=0 and fixed the function `split_dev_test`|
+
+### Models compared
+
+| Model | Tuned | Feature selection | ROC-AUC | Standard deviation |
+|---|---:|---|---:|---:|
+| XGBoost | No | `min_votes = 2` | 0.913 | 0.010 |
+| Oblique random forest | Yes | `min_votes = 1` | 0.910 | 0.009 |
+| AdaBoost | Yes | `min_votes = 2` | 0.906 | 0.011 |
+| XGBoost | Yes | `min_votes = 1` | 0.906 | 0.012 |
+| Oblique random forest | No | `min_votes = 2` | 0.904 | 0.011 |
+| AdaBoost | No | `min_votes = 2` | 0.903 | 0.012 |
+| Random forest | Yes | `min_votes = 2` | 0.900 | 0.012 |
+| Random forest | No | `min_votes = 2` | 0.898 | 0.013 |
+| Logistic regression | Yes | `min_votes = 2` | 0.896 | 0.011 |
+| Logistic regression | No | `min_votes = 2` | 0.896 | 0.011 |
+| Decision tree | Yes | `min_votes = 1` | 0.873 | 0.013 |
+| Decision tree | No | `min_votes = 2` | 0.740 | 0.020 |
+
+
+The default XGBoost run was selected because it achieved the best ROC-AUC among the
+compared runs, with a score of 0.913 ± 0.010. The tuned oblique random forest was the
+second-best model at 0.910 ± 0.009. The final feature selector kept 8 of 38 transformed
+features in the selected XGBoost run. 
+```text
+Features kept: 8 of 37: numeric__age, numeric__education_num, numeric__capital_gain, numeric__capital_loss, numeric__hours_per_week, categorical__marital_status, categorical__occupation, categorical__relationship
+```
+
+### Final model and predictions
+
+The final model was refitted on all 6,000 rows from `adult_train.csv`. Predictions for
+the 2,000 rows in `adult_new.csv` were saved to:
+
+```text
+predictions/adult_predictions.csv
+```
+
+The predictions file contains:
+
+```text
+id, probability, prediction
+```
+
+The most difficult assumption to find was that the pipeline silently depended on
+COMPAS-specific columns and some functions were not general. The target scores were reached by configuring the pipeline specifically for the Adult dataset instead of keeping the COMPAS assumptions. The main improvements were converting ? into real missing values, imputing missing data, adding missingness indicators for workclass and occupation, and using the correct numerical and categorical features. Removing id, fnlwgt, and the redundant education column also prevented irrelevant or duplicated information from entering the model. The untuned XGBoost model with feature selection achieved the best result, with ROC-AUC 0.913, accuracy 0.863, and F1 0.682.
+
 
 # Baseline Predictive Pipeline -- ETAI
 

@@ -100,21 +100,38 @@ def fairness_report(y_true, oof_proba, extras: pd.DataFrame, sensitive_attr: str
     df[sensitive_attr] = df[sensitive_attr].astype(object).fillna("unknown")
     df["y_true"] = pd.Series(y_true).values
     df["y_pred_model"] = (oof_proba >= threshold).astype(int)
-    df["y_pred_compas"] = (df["score_text"] != "Low").astype(int)
 
     lines = [
-        f"False positive rate by {sensitive_attr} (development set, out-of-fold)",
+        f"False positive rate by {sensitive_attr}",
         "(share of people who did NOT reoffend, but were predicted to)",
         "",
     ]
-    for label, col in [("Our model", "y_pred_model"), ("COMPAS's own score", "y_pred_compas")]:
+
+    reports = [
+        ("Our model", "y_pred_model"),
+    ]
+
+    if "score_text" in df.columns:
+        df["y_pred_compas"] = (df["score_text"] != "Low").astype(int)
+        reports.append(("COMPAS's own score", "y_pred_compas"))
+
+    for label, col in reports:
         lines.append(f"  {label}:")
-        for group, g in df.groupby(sensitive_attr):
-            negatives = g[g["y_true"] == 0]
+
+        for group, group_data in df.groupby(sensitive_attr):
+            negatives = group_data[group_data["y_true"] == 0]
+
             if len(negatives) == 0:
                 continue
+
             fpr = (negatives[col] == 1).mean()
-            lines.append(f"    {group:<20s} FPR = {fpr:.2f}  (n={len(negatives)})")
+
+            lines.append(
+                f"    {group:<20s} "
+                f"FPR = {fpr:.2f} "
+                f"(n={len(negatives)})"
+            )
+
         lines.append("")
     return "\n".join(lines)
 

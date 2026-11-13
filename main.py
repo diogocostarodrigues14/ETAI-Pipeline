@@ -10,10 +10,11 @@ This orchestrates the full (deliberately simple) pipeline:
 """
 from datetime import datetime
 from logging import config
+import sys
 import optuna
 import yaml
 from sklearn.model_selection import StratifiedKFold
-
+import pandas as pd
 from src.data import load_data
 from src.preprocessing import clean_dataset, drop_duplicate_rows, split_features_target, split_dev_test
 from src.model import build_pipeline
@@ -31,13 +32,15 @@ def load_config(path: str = "config.yaml") -> dict:
 
 
 def main():
-    config = load_config()
+    config_path = sys.argv[1] if len(sys.argv) > 1 else "config.yaml"
+    config = load_config(config_path)
     run = datetime.now().strftime("%Y%m%d_%H%M%S")
     model_type = config["model"]["type"]
 
     df_raw = load_data(config["data"]["path"])
     df_clean = clean_dataset(df_raw, config["diagnostics"])
     df_clean = drop_duplicate_rows(df_clean, config["diagnostics"].get("id_column"))
+    
 
     mnar_sources = config["preprocessing"].get("mnar_indicator_sources", [])
     X, y, extras = split_features_target(df_clean, config["data"], mnar_sources)
@@ -61,7 +64,9 @@ def main():
     print(f"Model: {model_type}   |   selection metric: {selection_metric}   |   "
           f"{cv_config['n_splits']}-fold CV   |   feature selection: "
           f"{'min_votes ' + str(selection_config.get('min_votes', 2)) if selection_enabled else 'off'}")
-    print(f"Data:  {len(X_dev)} development rows   |   {len(X_test)} test rows locked away (not used)")
+    test_rows = len(X_test) if X_test is not None else 0
+    print(f"Data: {len(X_dev)} development rows | "
+      f"{test_rows} test rows locked away")
 
     cache_dir = tempfile.mkdtemp(prefix="pipeline_cache_")       # 1
     pipeline = build_pipeline(config["preprocessing"], config["model"], selection_config, memory=cache_dir)   # 2
@@ -71,7 +76,7 @@ def main():
     fold_scores, oof_proba = cross_validate_pipeline(pipeline, X_dev, y_dev, cv, scorers, selection_metric, n_jobs)
     floor, untuned = floor_scores["validation"].mean(), fold_scores["validation"].mean()
 
-    print("\nDefault hyperparameters (config.yaml)")
+    print(f"\nDefault hyperparameters ({config_path})")
     print(f"  {selection_metric}: {untuned:.3f} ± {fold_scores['validation'].std(ddof=1):.3f}   "
           f"train-validation gap: {fold_scores['gap'].mean():+.3f}   no-model floor: {floor:.3f}")
     report = (f"Hyperparameters from config.yaml: {config['model'].get('params')}\n\n"
@@ -121,6 +126,30 @@ def main():
     report += "\n" + fairness_report(y_dev, oof_proba, extras_dev, sensitive_attr=config["data"]["sensitive_attr"])
 
     pipeline.fit(X_dev, y_dev)
+    if "inference_path" in config["data"]:
+        new_df = load_data(config["data"]["inference_path"])
+        new_ids = new_df["id"].copy()
+
+        new_clean = clean_dataset(new_df, config["diagnostics"])
+        X_new, _, _ = split_features_target(
+            new_clean,
+            config["data"],
+            config["preprocessing"].get("mnar_indicator_sources", []),
+        )
+
+        new_probability = pipeline.predict_proba(X_new)[:, 1]
+        new_prediction = (new_probability >= 0.5).astype(int)
+
+        predictions = pd.DataFrame({
+            "id": new_ids,
+            "probability": new_probability,
+            "prediction": new_prediction,
+        })
+
+        predictions.to_csv(
+            config["output"]["predictions_path"],
+            index=False,
+        )
     refit = f"Final model: {model_type} refit on all {len(X_dev)} development rows."
     if selection_enabled:
         all_features = pipeline.named_steps["prep"].get_feature_names_out()

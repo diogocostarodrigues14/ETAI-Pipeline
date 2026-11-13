@@ -215,6 +215,8 @@ def split_dev_test(X, y, extras, test_size: float, random_state: int):
         Cross-validation (src/evaluate.py) splits it again into train/validation folds.
       - locked test set: never used to fit, tune, compare or choose anything. Its size and seed live in config.yaml's `test_set` section and are never changed after today.
     """
+    if test_size == 0:
+        return X, None, y, None, extras, None
     X_dev, X_test, y_dev, y_test, extras_dev, extras_test = train_test_split(
         X, y, extras, test_size=test_size, random_state=random_state, stratify=y
     )
