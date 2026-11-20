@@ -164,6 +164,27 @@ id, probability, prediction
 The most difficult assumption to find was that the pipeline silently depended on
 COMPAS-specific columns and some functions were not general. The target scores were reached by configuring the pipeline specifically for the Adult dataset instead of keeping the COMPAS assumptions. The main improvements were converting ? into real missing values, imputing missing data, adding missingness indicators for workclass and occupation, and using the correct numerical and categorical features. Removing id, fnlwgt, and the redundant education column also prevented irrelevant or duplicated information from entering the model. The untuned XGBoost model with feature selection achieved the best result, with ROC-AUC 0.913, accuracy 0.863, and F1 0.682.
 
+Week 10
+### Missing values and deployment
+
+I compared median, KNN, iterative and random-forest imputers using the XGBoost pipeline
+with feature selection, the same five folds and no tuning. The median, iterative and random-forest
+imputers all achieved ROC-AUC approximately 0.721, while KNN achieved approximately
+0.717. The corrected paired test comparing median and random-forest imputers produced
+a mean difference of -0.00024 and p-value 0.815. Because the difference was not
+statistically significant, I kept the median imputer: it is simpler, faster and achieved
+the same predictive performance.
+
+The final fitted pipeline was saved to `models/model.joblib`. New COMPAS rows can be
+predicted with:
+
+```powershell
+python predict.py data\compas_new_people.csv predictions.csv
+```
+
+The command reads 20 input rows and writes 20 rows to `predictions.csv` at the project
+root. The output contains `id`, `probability` and `prediction`.
+
 
 # Baseline Predictive Pipeline -- ETAI
 
@@ -203,7 +224,6 @@ This table is updated after each practical class, so you can always see what cha
 | Week | Practical class focus | Added to the pipeline |
 |------|------------------------|------------------------|
 | 2 | Introduction & baseline pipeline | Initial version: project structure, a single naive train/test split (no cross-validation), minimal preprocessing (drop rows with missing values, one-hot encode categoricals), logistic regression baseline, a first (deliberately simple) fairness check comparing our model's and COMPAS's own false-positive rate by race, train-vs-test accuracy reporting (to start spotting overfitting), and each run's full report saved automatically to `results/` |
-
 ## Environment setup
 
 You only need to do this once per machine.

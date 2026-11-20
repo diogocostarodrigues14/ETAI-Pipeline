@@ -8,10 +8,13 @@ This orchestrates the full (deliberately simple) pipeline:
     load config -> load data -> preprocess -> split -> train
     -> evaluate (train & test) -> save results
 """
+import os
+import joblib
 from datetime import datetime
 from logging import config
 import sys
 import optuna
+from sklearn import pipeline
 import yaml
 from sklearn.model_selection import StratifiedKFold
 import pandas as pd
@@ -126,6 +129,10 @@ def main():
     report += "\n" + fairness_report(y_dev, oof_proba, extras_dev, sensitive_attr=config["data"]["sensitive_attr"])
 
     pipeline.fit(X_dev, y_dev)
+    model_path = config["output"]["model_path"]
+    os.makedirs(os.path.dirname(model_path), exist_ok=True)
+    joblib.dump(pipeline, model_path)
+    print(f"Model saved to {model_path}")
     if "inference_path" in config["data"]:
         new_df = load_data(config["data"]["inference_path"])
         new_ids = new_df["id"].copy()
