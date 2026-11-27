@@ -185,6 +185,41 @@ python predict.py data\compas_new_people.csv predictions.csv
 The command reads 20 input rows and writes 20 rows to `predictions.csv` at the project
 root. The output contains `id`, `probability` and `prediction`.
 
+Week 11
+### Outliers and anomaly scores
+
+**Hypothesis:** I predicted that adding an anomaly score would not meaningfully change
+the model's overall performance, so its ROC-AUC would stay about the same. This does not
+mean every person's predicted label would be identical; I expected no clear overall
+improvement. I also expected the most unusual group to have, at most, a slightly higher
+reoffence rate, rather than most unusual people reoffending.  
+
+I added an `AnomalyScore` pipeline step after preprocessing and before feature selection.
+It supports Isolation Forest and Local Outlier Factor (LOF), and is fitted inside each
+cross-validation fold so validation rows are not used to fit the detector.
+
+I compared the same XGBoost model, feature selection settings, five stratified folds and
+random seed (42), with tuning disabled. ROC-AUC was the selection metric:
+
+| Anomaly method | ROC-AUC (mean +/- std) |
+|---|---:|
+| None | 0.721 +/- 0.013 |
+| Isolation Forest | 0.714 +/- 0.013 |
+| LOF | 0.715 +/- 0.013 |
+
+The corrected paired tests comparing `none` with Isolation Forest and LOF gave p-values
+of 0.267 and 0.082, respectively. Neither difference is statistically significant at
+the 0.05 level. In these runs, adding the anomaly score did not improve ROC-AUC; `none`
+had the highest mean score, although the differences were small.
+
+Using LOF scores from the final fit on the 5,771-row development set, 289 people (the
+highest-scoring 5%) had a reoffence rate of 51.6%, compared with 44.7% among the other
+95%. This is a modest increase, not evidence that most unusual people reoffend. This
+comparison is descriptive and uses the same development rows used to fit LOF, so it is
+not an independent estimate.
+
+My hypothesis was supported: adding an anomaly score did not produce a clear improvement in ROC-AUC. The highest-LOF 5% had a somewhat higher reoffence rate, but most of those people were not rearrested.
+
 
 # Baseline Predictive Pipeline -- ETAI
 

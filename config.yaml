@@ -175,3 +175,8 @@ feature_selection:
   random_state: 42
   search_space:                                     # tuned together with the model when tuning is on
     select__min_votes: {type: int, low: 1, high: 3}
+
+anomaly:
+  method: "lof"  # "none", "isolation_forest" ou "lof"
+  n_neighbors: 20
+  random_state: 42
